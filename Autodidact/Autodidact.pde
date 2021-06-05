@@ -28,16 +28,18 @@ int wordLength = words.length;
 
 int counter = 0;
 int  skip = 4;
+int maxDistance = 250; 
+
+
 
 Boolean bubbles = true;
 Boolean imageToggle = true;
 
-ArrayList<Float> motionHistory;
-int historySize = 10;
 int maxMotion = 50;
+float lastMotion;
 
 void setup () {
-    size (1920, 1080);
+  size (1920, 1080);
   //fullScreen(P3D, 2);
 
   // Kinect
@@ -64,8 +66,8 @@ void setup () {
   textFont(poemFont); 
 
   textAlign(LEFT, CENTER);
+
   
-  motionHistory = new ArrayList<Float>();
 };
 
 
@@ -112,23 +114,9 @@ void draw() {
 
   // Iterate through the kinect pixels
   for (int y = 0; y < kinect2.depthHeight; y += skip * 1.5) {
-    int place = 0;
-    int oldplace = 0;
+    
     for (int x = 0; x < kinect2.depthWidth; x += (skip * words[(abs(counter - 1)) % words.length].length())) {   
-      /*
-      place = x;
-       
-       
-       int XDistance = place - oldplace;
-       
-       if (XDistance > 50) {
-       break;
-       }
-       
-       println(XDistance);
-       oldplace = place;
-       
-       */
+
 
       int index = x + y * kinect2.depthWidth;
       float distance = depth[index];
@@ -152,10 +140,8 @@ void draw() {
     }
   }
 
-  //totalMotion = lerp (totalMotion, lastSaturation - totalSaturation, 0.1);
-  if (motionHistory.size() > 1) {
-    totalMotion = lerp(totalMotion, abs(motionHistory.get(0) - motionHistory.get(motionHistory.size()-1))/10000, 0.1);
-  }
+    totalMotion = lerp(totalMotion, lastMotion / 10000, 0.1);
+  
 
   fill(0, 0, 0);
   textSize(25);
@@ -170,18 +156,14 @@ void draw() {
    text(("TOTAL MOTION:"+ totalMotion), 10, 96);
    */
 
-  motionHistory.add(totalSaturation);
 
-  if (this.motionHistory.size() > historySize) {
-    this.motionHistory.remove(0);
-  }
 
   for (PoemWord w : poemWords) {
-
-        w.update();
+    w.update(counter);
 
     w.display();
   }
+  lastMotion = totalMotion;
 }
 
 
@@ -218,6 +200,9 @@ class PoemWord {
 
   int index;
 
+  PVector restPosition;
+  PVector restVelocity;
+
   PVector position;
   PVector lastPosition;
   PVector velocity;
@@ -231,34 +216,33 @@ class PoemWord {
   int alpha2;
   int jumpFlag;
 
-  int maxDistance = 60; 
   float pixelDistance;
 
   int fadeSpeed = 10;
 
-  int historySize = 0;
-  ArrayList<PVector> history;
 
   //depthimg = 512 *424
 
-  int heightRatio = height/424;
-  int widthRatio = width/512;
+  int heightRatio = height/kinect2.depthHeight;
+  int widthRatio = width/kinect2.depthWidth;
 
   float threshold = 1000;
-  
+
   PFont poemFont;
-  
+
 
   PoemWord(int indexTemp, String [] wordsTemp) {
 
     topspeed = 0.001;
 
-poemFont = loadFont("Argesta.vlw");
-  textFont(poemFont); 
+    poemFont = loadFont("Argesta.vlw");
+    textFont(poemFont); 
 
     index = indexTemp;
     thisWord = wordsTemp[index];
 
+    restPosition = new PVector(random(width), random(height), -random(200));
+    restVelocity = new PVector(random(width), random(height), 0);
     position = new PVector(random(width), random(height), -random(20));    
     target = new PVector(0, 0, 0);    
     newTarget = new PVector(0, 0, 0);    
@@ -268,31 +252,28 @@ poemFont = loadFont("Argesta.vlw");
     acceleration = new PVector(0, 0, 0);
 
     //   target = new PVector(0, 0, 0);
-    easing = 0.3;
+    easing = 0.5;
     alpha = 255;
     alpha2 = 0;
     jumpFlag = 1;
     pixelDistance = 255;
 
-    this.history = new ArrayList<PVector>();
   }
 
 
 
   void positionChange(PVector tempVector) {
 
-    tempVector.x = (tempVector.x * heightRatio) + (width/4) ;
-    tempVector.y = (tempVector.y * widthRatio) - (height / 4) ;
-        pixelDistance = map(tempVector.z, 0, 255, 0, 255);
+    tempVector.x =  (tempVector.x * widthRatio) ;
+    tempVector.y = (tempVector.y * heightRatio) ;
+    pixelDistance = map(tempVector.z, 0, 255, 0, 255);
     tempVector.z = map(tempVector.z, minDepth, maxDepth, 150, 0);
-    //   velocity.limit(topspeed);
-    
-    
-        if (totalMotion > maxMotion) {
-    target =  tempVector;
-        }
-        
+    velocity.limit(topspeed);
 
+
+  //  if (totalMotion > maxMotion) {
+      target =  tempVector;
+ //   }
   };
 
   void positionChange() {
@@ -302,48 +283,29 @@ poemFont = loadFont("Argesta.vlw");
 
 
 
-  void update() {
-
-
-
-      newTarget = target.copy();
-      newTarget.sub(position);
-      velocity = newTarget;
-
-      if (index == 1) {
+  void update(int tempCounter) {
+    newTarget = target.copy();
+    newTarget.sub(position);
+    velocity = newTarget;
     
-
-      }
+    
+    
+    
+    if (this.index < tempCounter) {
       if (dist(target.x, target.y, position.x, position.y) < maxDistance) {
-
-
-        position.add(velocity.mult(easing));
+        position = position.lerp(target, 0.15);
+        // position.add(velocity.mult(easing));
       } else {
-        position.add(velocity);
-
+        //  position.add(velocity);
         velocity = new PVector (0, 0, 0);
         acceleration = new PVector (0, 0, 0);
+        position = position.lerp(target, 0.95);
       }
-    
-    /*
-    lastPosition = position;
-     
-     
-     
-     jumpFlag = 1;
-     position = target;
-     */
 
-    for (PVector v : this.history) {
-      v.x += 0;
-      v.y += 0;
-      v.z += 0;
-    }
-
-    PVector v = new PVector(position.x, position.y, position.z);
-    this.history.add(v); 
-    if (this.history.size() > historySize) {
-      this.history.remove(0);
+ 
+    } else {
+      position = position.lerp(restPosition, 0.05);
+      velocity = restVelocity;
     }
   }
 
@@ -356,16 +318,11 @@ poemFont = loadFont("Argesta.vlw");
     textSize(14);
 
 
-    for (int i = 0; i < history.size() - 1; i++)
-    {
-      PVector pos = history.get(i);
-      fill(0, 0, 0, (i * (150/history.size())));
-      text(thisWord, pos.x, pos.y, pos.z);
-    }
+ 
 
 
     // float brightness = map (position.z, 0, 255, 100, 255);
-    float brightness = map(position.z, 0, 150, 150, 0);
+    float brightness = map(position.z, -50, 150, 150, 0);
     fill(brightness, brightness, brightness, alpha);
     //alpha = constrain(alpha + fadeSpeed, 0, 255);
 
