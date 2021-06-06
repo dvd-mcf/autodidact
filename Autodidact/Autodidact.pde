@@ -11,6 +11,9 @@ PFont f;
 int minDepth =  0;
 int maxDepth =  1140; //4.5m
 
+  int[] oldDepth;
+  int[] depth;
+  
 // What is the kinect's angle
 float angle;
 
@@ -33,11 +36,11 @@ int dedicationOffset = 50;
 
 PFont titleFont;
 
-Boolean bubbles = true;
-Boolean imageToggle = true;
+Boolean bubbles = false;
+Boolean imageToggle = false;
 
-int maxMotion = 20000;
-float lastMotion;
+int maxMotion = 26;
+float finalMotion = 40;
 
 void setup () {
   //  size (1920, 1080);
@@ -52,8 +55,8 @@ titleFont = loadFont("Title.vlw");
   depthImg = new PImage(kinect2.depthWidth, kinect2.depthHeight);
   lastImg = new PImage(kinect2.depthWidth, kinect2.depthHeight);
 
-
-
+  depth = kinect2.getRawDepth();
+  oldDepth = kinect2.getRawDepth();
 
   // Initialise word ArrayList
 
@@ -79,12 +82,21 @@ void draw() {
   background (255);
 
   int counter = 0;
-  int[] depth = kinect2.getRawDepth();
+  
+  oldDepth = depth;
+  depth = kinect2.getRawDepth();
   float totalSaturation = 0;
 
-
+  float totalMotion = 0;
 
   for (int i=0; i < depth.length; i++) {
+    
+    float diff = abs(depth[i] - oldDepth[i]);
+    
+    totalMotion += diff;
+    
+    
+    
     if (depth[i] >= minDepth && depth[i] <= maxDepth) {
       float ratio = (maxDepth - minDepth)/255.0;
       depthImg.pixels[i] = color((depth[i] - minDepth)/ratio);
@@ -97,7 +109,9 @@ void draw() {
     }
   }
 
+float avgMotion = totalMotion / depth.length;
 
+finalMotion = lerp(finalMotion, avgMotion, 0.1);
 
 
   // Draw the thresholded image
@@ -160,7 +174,7 @@ void draw() {
 
   text(("TOTAL SATURATION:"+ totalSaturation), 10, 56);
   //text(("LAST SATURATION:"+ lastSaturation), 10, 76);
-  text(("TOTAL MOTION:"+ totalMotion), 10, 96);
+  text(("AVG MOTION:"+ avgMotion), 10, 96);
 
   }
 
@@ -284,6 +298,7 @@ class PoemWord {
     alpha2 = 0;
     jumpFlag = 1;
     pixelDistance = 255;
+    counter = 0;
   }
 
 
@@ -297,7 +312,7 @@ class PoemWord {
     velocity.limit(topspeed);
 
 
-    if (totalMotion > maxMotion) {
+    if (finalMotion > maxMotion) {
       target =  tempVector;
     }
   };
@@ -312,7 +327,9 @@ class PoemWord {
   void update(int tempCounter) {
 
 
-
+    if (finalMotion > maxMotion) {
+      counter = tempCounter;
+    }
 
 
 
@@ -325,7 +342,7 @@ class PoemWord {
 
 
 
-    if (this.index < tempCounter) {
+    if (this.index < counter) {
       if (dist(target.x, target.y, position.x, position.y) < maxDistance) {
         position = position.lerp(target, 0.05);
         // position.add(velocity.mult(easing));
