@@ -11,9 +11,9 @@ PFont f;
 int minDepth =  0;
 int maxDepth =  1140; //4.5m
 
-  int[] oldDepth;
-  int[] depth;
-  
+int[] oldDepth;
+int[] depth;
+
 // What is the kinect's angle
 float angle;
 
@@ -24,7 +24,7 @@ float totalSaturation;
 float totalMotion;
 ArrayList<PoemWord> poemWords;
 
-String poem = "An anchor here, a grappling iron there, something to overarm back to, an author, a date, chartless you plunge on, grasp and clutch, the freight, sand in your eyes from staying up late, you learn the word autodidact, loop it onto something else and now you’ve ballast, some heft to it, hand over hand, salt stinging, the long line of those who’ve done this too, who fought for time and space and quiet, sideways slow arm over arm across the current, curlicues and dead calms, flailing in a sudden deeper channel, ideas that fizz for weeks, only slowly overtaken by another that blooms dahlia bright, recedes in constellations, new friends you hopped then leapt between and sometimes came a cropper, and still you grabbed and clung and over-reached, plucked a name from the air and held it ‘till it squeaked and split, you’d ask for help when you had the words, how can you ask do you have any books on words? name on name, hook one to the next, like lights you strung together, you start to ask do you have any books on light? machinations of argument, unbreachable, reading between split shifts on a bench, plunge on, out late, names, scrawled on serviettes, on bus tickets, home half pissed, sand in your eyes, riffling back and forth through the dictionary, spelling against you, always against you, ‘till you figure it out, write it out, a breach in the sea-wall of someone else’s text, stubbornness is what it boils down to, a coming back and coming back, knowing you’d spell it wrong, pronounce it wrong, wrong wrong, clangs like a bell, a refusal to admit defeat, split shifts, back to the library, bashing into walls of words, do you have any books on the rise of wage labour? Eyes hungry, hands hungry, unball yourself on the street, new thoughts colliding like boiled sweets, ruby, lemon, turquoise, coalesce, re-form, you come round by naming, bicycle small dog, whole chunks of this jig-saw sky are missing, do you have any books on the sky? Channels deepen merge, plunge on, build a constellation, then another, until you have your own son and he needs to know, not the grasp and clutch and the swirling sand and the jigsaw sky, instead pretend that this is his, the sentences that run from left to right, the names along the spine, the books you’re allowed to touch, show him the book with the words in, keep quiet about the rest, turn the pages for him, flip him loose till he slips the halter of time and place, dives, submerged, comes back prattling of monsters and machines fire-working in him, turquoise, ruby, lemon, and somersaults again and back, you keep quiet and turn the pages so that for him this can be coming home. End";
+String poem = "An anchor, a grappling iron, something to overarm back to, author, date, grasp and clutch, ideas that fizz for days, slowly overtaken by another that blooms starfish bright, recedes in constellations you hop, then leap between & sometimes come a cropper, and still you grab and cling and over-reach, pluck a name and hold it ‘till it squeaks & splits, hook one name to the next, lights strung together, you start to ask – do you have any books on light? reading between split shifts, machinations of argument, unbreachable, plunge on, names scrawled on the back of your hand, late-night sand in your eyes, riffling back and forth through the book of all the words, spelling against you, always against you ‘till you figure it out, a breach in the sea-wall, you learn the word autodidact, loop it onto something else and now you’ve ballast, some heft to it, hand over hand, salt stinging, the long line of those who’ve done this too, who fought for time and space and quiet, travelling sideways, slowarm across the current, curlicues and dead calms, flailing in a sudden deeper channel, whole chunks of the jig-saw sky missing – do you have any books on the sky? stubbornness is what it boils down to, a coming back and coming back, knowing you’ll spell it wrong, pronounce it wrong, wrong wrong, clangs like a bell, split shift, back to the library – do you have any books on the rise of wage labour? bashing into walls of words, unball yourself on the street, new thoughts colliding like boiled sweets, ruby, lemon, turquoise, coalesce, re-form to constellations, plunge on, until you have your own son and he needs to know, not the grasp and clutch and swirling sand and jigsaw sky, instead, how sentences run from left to right, how the author’s name is on the side which is the spine, how you’re allowed to touch, and the one with all the words inside, turn the page, flip him loose till he slips and dives, comes back prattling of monsters and machines, fire-working turquoise, ruby, lemon, keep quiet, turn the pages, so that for him, this can be coming home. End";
 // String poem = "Test the sound Test the sound Test the sound";
 String[] words = split(poem, ' ');
 int wordLength = words.length;
@@ -33,21 +33,23 @@ int counter = 0;
 int  skip = 10;
 int maxDistance = 250;
 int dedicationOffset = 50;
-
+float minSaturation = 0.5;
 PFont titleFont;
+PFont dedicationFont;
+
 
 Boolean bubbles = false;
 Boolean imageToggle = false;
 
-int maxMotion = 26;
+int maxMotion = 20;
 float finalMotion = 40;
 
 void setup () {
   //  size (1920, 1080);
   fullScreen(P3D);
 
-titleFont = loadFont("Title.vlw");
-
+  titleFont = loadFont("CalendasPlus-Bold-40.vlw");
+  dedicationFont = loadFont("Bould-ExtraLightItalic-40.vlw");
   // Kinect
   kinect2 = new Kinect2(this);
   kinect2.initDepth();
@@ -68,10 +70,7 @@ titleFont = loadFont("Title.vlw");
 
   // Set font
   PFont poemFont;
-  poemFont = loadFont("Argesta.vlw");
-  textFont(poemFont);
-
-  textAlign(LEFT, CENTER);
+  poemFont = loadFont("Title.vlw");
 };
 
 
@@ -82,21 +81,20 @@ void draw() {
   background (255);
 
   int counter = 0;
-  
+
   oldDepth = depth;
   depth = kinect2.getRawDepth();
   float totalSaturation = 0;
-
   float totalMotion = 0;
 
   for (int i=0; i < depth.length; i++) {
-    
+
     float diff = abs(depth[i] - oldDepth[i]);
-    
+
     totalMotion += diff;
-    
-    
-    
+
+
+
     if (depth[i] >= minDepth && depth[i] <= maxDepth) {
       float ratio = (maxDepth - minDepth)/255.0;
       depthImg.pixels[i] = color((depth[i] - minDepth)/ratio);
@@ -109,9 +107,9 @@ void draw() {
     }
   }
 
-float avgMotion = totalMotion / depth.length;
+  float avgMotion = totalMotion / depth.length;
 
-finalMotion = lerp(finalMotion, avgMotion, 0.1);
+  finalMotion = lerp(finalMotion, avgMotion, 0.1);
 
 
   // Draw the thresholded image
@@ -130,7 +128,7 @@ finalMotion = lerp(finalMotion, avgMotion, 0.1);
   // Iterate through the kinect pixels
   for (int y = 0; y < kinect2.depthHeight; y += 8) {
 
-    for (int x = 0; x < kinect2.depthWidth; x += (textWidth(words[(abs(counter - 1)) % words.length]) / 3)) {
+    for (int x = 0; x < kinect2.depthWidth; x += (textWidth(words[(abs(counter - 1)) % words.length]) / 2.8)) {
 
 
       int index = x + y * kinect2.depthWidth;
@@ -164,45 +162,50 @@ finalMotion = lerp(finalMotion, avgMotion, 0.1);
 
 
   fill(0, 0, 0);
-  textSize(25);
 
   // circle (400, height - totalMotion, 50);
 
   if (imageToggle == true) {
 
-  //      text("Total Motion: [" + totalMotion "]", 10, 36);
+    //      text("Total Motion: [" + totalMotion "]", 10, 36);
 
-  text(("TOTAL SATURATION:"+ totalSaturation), 10, 56);
-  //text(("LAST SATURATION:"+ lastSaturation), 10, 76);
-  text(("AVG MOTION:"+ avgMotion), 10, 96);
-
+    text(("TOTAL SATURATION:"+ totalSaturation ), 10, 56);
+    //text(("LAST SATURATION:"+ lastSaturation), 10, 76);
+    text(("AVG MOTION:"+ avgMotion), 10, 96);
   }
 
 
   for (PoemWord w : poemWords) {
-    w.update(counter);
-
+    w.update(counter, totalSaturation);
     w.display();
   }
+
   lastSaturation = totalSaturation;
-  
+
   fill(70);
-  
+
   textSize(40);
   textAlign(CENTER);
-  
-      
 
-  
   textFont (titleFont);
-   text("Autodidact", width/2, 70, 0);
+  String title = "Autodidact";
+  text(title, width/2, 70, 0);
+  strokeWeight(2);
+  stroke (70);
+  // line(width/2 - textWidth(title)/1.8, 80, width/2 + textWidth(title)/1.8, 80);
+  
+  textFont (dedicationFont);
   textAlign(LEFT);
   textSize(20);
-  text ("Commisioned for the Future Libraries Festival and the Manchester Poetry Library", dedicationOffset, height - 80);
-  text ("Creative technology by David McFarlane", dedicationOffset, height - 55);
-  text ("Poetry by Charlotte Wetton", dedicationOffset, height - (30) );
-  
-  
+    text ("Commissioned for Manchester City of Literature's Festival of Libraries 2021", dedicationOffset, height - 180);
+    text ("with Manchester Poetry Library", dedicationOffset, height - 155);
+  text ("Technology by David McFarlane (@dvd_mcf)", dedicationOffset, height - 130);
+  text ("Poetry by Charlotte Wetton (@CharPoetry)", dedicationOffset, height - (105) );
+
+  text ("With thanks to Future Everything and The Writing Squad", dedicationOffset, height - (80) );
+  text ("#FestivalofLibraries", dedicationOffset, height - (55) );
+ text ("www.manchestercityofliterature.com", dedicationOffset, height - (30) );
+
 }
 
 
@@ -318,36 +321,30 @@ class PoemWord {
   };
 
   void positionChange() {
-
     target = lastPosition;
   };
 
 
 
-  void update(int tempCounter) {
+  void update(int tempCounter, float tempSaturation) {
 
-
+tempSaturation = tempSaturation / 10000000 ;
     if (finalMotion > maxMotion) {
       counter = tempCounter;
     }
 
-
-
-
     newTarget = target.copy();
     newTarget.sub(position);
     velocity = newTarget;
-
     restPosition.add(restVelocity);
+  
 
-
-
-    if (this.index < counter) {
+    if ((this.index < counter) && (tempSaturation > minSaturation)) {
       if (dist(target.x, target.y, position.x, position.y) < maxDistance) {
         position = position.lerp(target, 0.05);
-        // position.add(velocity.mult(easing));
+
       } else {
-        //  position.add(velocity);
+
         velocity = new PVector (0, 0, 0);
         acceleration = new PVector (0, 0, 0);
         position = position.lerp(target, 0.95);
@@ -355,7 +352,7 @@ class PoemWord {
 
       brightness = map (position.z, 0, - 20, 70, 255);
     } else {
-      
+
       if (restPosition.x > width*2) {
         position.x = 0 - width;
         restPosition.x = 0 - width;
@@ -386,11 +383,10 @@ class PoemWord {
 
 
   void display() {
-    textSize(14);
 
-
-
-
+    textFont(poemFont);
+    textAlign(LEFT, CENTER);
+    textSize(15);
 
     // float brightness = map (position.z, 0, 255, 100, 255);
     //   float brightness = map(position.z, -50, 150, 150, 0);
